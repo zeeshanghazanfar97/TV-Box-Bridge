@@ -4,6 +4,9 @@ This app reads the HDMI capture stick through Linux media devices. The USB ID
 `534d:2109` identifies the MacroSilicon bridge, but streaming uses V4L2 video
 and ALSA audio.
 
+The IR remote bridge uses a Raspberry Pi Pico USB serial device. Its stable
+setup is covered in [ir-bridge.md](ir-bridge.md).
+
 ## 1. Inspect the capture card
 
 Run these on the Ubuntu server:
@@ -73,6 +76,10 @@ silent Opus audio while validating the video stream.
 cp .env.example .env
 docker compose up --build
 ```
+
+Before starting Compose with `IR_BRIDGE_ENABLED=true`, install the Pico udev rule
+from [ir-bridge.md](ir-bridge.md) so `/dev/ir-pico` exists on the host. The
+dashboard service maps that device into the container.
 
 For another device on your LAN, set these before starting Compose:
 

@@ -2,6 +2,8 @@ import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveRemoteSequence, summarizeCode } from "./remote-codes.js";
+import { SerialIrBridge } from "./serial-ir-bridge.js";
 
 const root = join(fileURLToPath(new URL("..", import.meta.url)), "dist");
 const port = Number(process.env.PORT || 8080);
@@ -14,8 +16,24 @@ const config = {
   whepUrl: process.env.STREAM_WHEP_URL || process.env.VITE_STREAM_WHEP_URL || "",
   mediamtxApiUrl: process.env.MEDIAMTX_API_URL || "http://localhost:9997",
   videoDevice: process.env.TVBOX_VIDEO_DEVICE || "/dev/tvbox-video",
-  audioDevice: process.env.TVBOX_AUDIO_DEVICE || "plughw:CARD=<capture-card-id>,DEV=0"
+  audioDevice: process.env.TVBOX_AUDIO_DEVICE || "plughw:CARD=<capture-card-id>,DEV=0",
+  remote: {
+    enabled: process.env.IR_BRIDGE_ENABLED !== "false",
+    serialPath: process.env.IR_SERIAL_PATH || process.env.IR_SERIAL_DEVICE || "/dev/ir-pico",
+    serialBaud: Number(process.env.IR_SERIAL_BAUD || 115200),
+    serialTimeoutMs: Number(process.env.IR_SERIAL_TIMEOUT_MS || 1400),
+    commandDelayMs: Number(process.env.IR_COMMAND_DELAY_MS || 120),
+    channelConfirmCommand: process.env.IR_CHANNEL_CONFIRM_COMMAND || ""
+  }
 };
+
+const irBridge = new SerialIrBridge({
+  enabled: config.remote.enabled,
+  path: config.remote.serialPath,
+  baudRate: config.remote.serialBaud,
+  timeoutMs: config.remote.serialTimeoutMs,
+  commandDelayMs: config.remote.commandDelayMs
+});
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -125,6 +143,8 @@ async function handleStatus(request, response) {
     media.lastError = error instanceof Error ? error.message : "MediaMTX API is not reachable";
   }
 
+  const remoteStatus = await irBridge.status();
+
   sendJson(response, 200, {
     serverTime: new Date().toISOString(),
     capture: {
@@ -141,38 +161,65 @@ async function handleStatus(request, response) {
       viewers: media.viewers
     },
     remote: {
-      stub: true,
-      recent: remoteLog.length
+      stub: !remoteStatus.enabled,
+      enabled: remoteStatus.enabled,
+      available: remoteStatus.available,
+      device: remoteStatus.device,
+      baudRate: remoteStatus.baudRate,
+      recent: remoteLog.length,
+      lastError: remoteStatus.lastError,
+      lastCommandAt: remoteStatus.lastCommandAt
     }
   });
 }
 
 async function handleRemoteCommand(request, response) {
+  let entry = null;
+
   try {
     const raw = await readBody(request);
     const payload = raw ? JSON.parse(raw) : {};
     const command = String(payload.command || "").trim();
-    if (!command) {
-      sendJson(response, 400, { error: "command is required" });
-      return;
-    }
+    const sequence = resolveRemoteSequence(payload, {
+      channelConfirmCommand: config.remote.channelConfirmCommand
+    });
 
-    const entry = {
+    entry = {
       id: nextRemoteId++,
       command,
       label: String(payload.label || command),
       value: payload.value ?? null,
       receivedAt: new Date().toISOString(),
-      stub: true
+      stub: !config.remote.enabled,
+      sent: false,
+      sequence: sequence.map(summarizeCode),
+      bridgeResponses: [],
+      error: null
     };
+
+    if (config.remote.enabled) {
+      entry.bridgeResponses = await irBridge.sendSequence(sequence);
+      entry.sent = true;
+    }
 
     remoteLog.unshift(entry);
     remoteLog.splice(24);
 
-    sendJson(response, 200, { accepted: true, stub: true, entry });
+    sendJson(response, 200, { accepted: true, stub: entry.stub, entry });
   } catch (error) {
-    sendJson(response, 400, {
-      error: error instanceof Error ? error.message : "Invalid request"
+    const statusCode = error?.statusCode || (entry ? 503 : 400);
+    const message = error instanceof Error ? error.message : "Invalid request";
+
+    if (entry) {
+      entry.error = message;
+      remoteLog.unshift(entry);
+      remoteLog.splice(24);
+    }
+
+    sendJson(response, statusCode, {
+      accepted: false,
+      error: message,
+      entry
     });
   }
 }
@@ -247,3 +294,9 @@ const server = createServer(async (request, response) => {
 server.listen(port, host, () => {
   console.log(`TV Box Bridge dashboard listening on ${host}:${port}`);
 });
+
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.on(signal, () => {
+    irBridge.close().finally(() => process.exit(0));
+  });
+}

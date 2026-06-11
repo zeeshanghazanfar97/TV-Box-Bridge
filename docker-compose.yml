@@ -24,8 +24,16 @@ services:
       MEDIAMTX_API_URL: "http://mediamtx:9997"
       TVBOX_VIDEO_DEVICE: "${TVBOX_VIDEO_DEVICE:-/dev/tvbox-video}"
       TVBOX_AUDIO_DEVICE: "${TVBOX_AUDIO_DEVICE:-plughw:CARD=<capture-card-id>,DEV=0}"
+      IR_BRIDGE_ENABLED: "${IR_BRIDGE_ENABLED:-true}"
+      IR_SERIAL_PATH: "${IR_SERIAL_PATH:-/dev/ir-pico}"
+      IR_SERIAL_BAUD: "${IR_SERIAL_BAUD:-115200}"
+      IR_SERIAL_TIMEOUT_MS: "${IR_SERIAL_TIMEOUT_MS:-1400}"
+      IR_COMMAND_DELAY_MS: "${IR_COMMAND_DELAY_MS:-120}"
+      IR_CHANNEL_CONFIRM_COMMAND: "${IR_CHANNEL_CONFIRM_COMMAND:-}"
     ports:
       - "8080:8080"
+    devices:
+      - "${IR_SERIAL_DEVICE:-/dev/ir-pico}:${IR_SERIAL_PATH:-/dev/ir-pico}"
     depends_on:
       - mediamtx
 

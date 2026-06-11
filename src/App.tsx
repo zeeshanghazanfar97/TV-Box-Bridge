@@ -30,8 +30,14 @@ const DEFAULT_STATUS: StatusResponse = {
     viewers: 0
   },
   remote: {
-    stub: true,
-    recent: 0
+    stub: false,
+    enabled: true,
+    available: false,
+    device: "/dev/ir-pico",
+    baudRate: 115200,
+    recent: 0,
+    lastError: null,
+    lastCommandAt: null
   }
 };
 
@@ -160,14 +166,16 @@ export function App() {
       try {
         const entry = await sendRemoteCommand({ command, label, value });
         pushToast(entry);
-      } catch {
+      } catch (error) {
         pushToast({
           id: Date.now(),
           command,
-          label: `${label} queued`,
+          label: error instanceof Error ? error.message : `${label} failed`,
           value,
           receivedAt: new Date().toISOString(),
-          stub: true
+          stub: false,
+          sent: false,
+          error: error instanceof Error ? error.message : "Remote command failed"
         });
       }
     },
@@ -196,12 +204,11 @@ export function App() {
       power: () => {
         setOn((current) => {
           const next = !current;
-          void send(next ? "power_on" : "power_off", next ? "Power On" : "Power Off", next);
+          void send("red_power_top", next ? "Power On" : "Power Off", next);
           return next;
         });
       },
       mute: () => {
-        if (!on) return;
         setRemoteMuted((current) => {
           const next = !current;
           void send(next ? "mute" : "unmute", next ? "Mute" : "Unmute", next);
@@ -237,9 +244,9 @@ export function App() {
         setChannelInput("");
         setKeypadOpen(false);
       },
-      adv: (command, label) => void send(command.toLowerCase().replace(/[^a-z0-9]+/g, "_"), label ?? command)
+      adv: (command, label) => void send(command, label ?? command)
     }),
-    [channelInput, on, send]
+    [channelInput, send]
   );
 
   const remoteState: RemoteState = {
@@ -252,6 +259,8 @@ export function App() {
 
   const captureOk = status.stream.ready || status.capture.state === "online";
   const captureValue = statusLabel(status.capture.state, status.stream.ready);
+  const remoteOk = status.remote.enabled ? status.remote.available : true;
+  const remoteValue = status.remote.enabled ? (status.remote.available ? "Ready" : "Missing") : "Stub";
   const whepUrl = status.stream.whepUrl || DEFAULT_STATUS.stream.whepUrl;
 
   return (
@@ -269,14 +278,11 @@ export function App() {
           </div>
           <div className="status-row">
             <StatusChip icon="chip" label="Capture" value={captureValue} ok={captureOk} />
-            <StatusChip icon="bolt" label="IR Bridge" value="Stub" ok />
+            <StatusChip icon="bolt" label="IR Bridge" value={remoteValue} ok={remoteOk} />
           </div>
           <div className="top-actions">
             <button className="iconbtn" title="Fullscreen" onClick={toggleVideoFullscreen}>
               <Icon name="fullscreen" size={18} />
-            </button>
-            <button className="iconbtn" title="Settings" onClick={() => void send("settings", "Open Settings")}>
-              <Icon name="settings" size={18} />
             </button>
           </div>
         </header>
@@ -295,7 +301,6 @@ export function App() {
               onVolumeChange={setStreamVolume}
               onRefresh={() => {
                 setRefreshToken((current) => current + 1);
-                void send("refresh_stream", "Refresh stream");
               }}
               onFullscreen={toggleVideoFullscreen}
             />

@@ -1,8 +1,8 @@
 # TV Box Bridge
 
 LAN dashboard for watching an HDMI cable box capture stream in the browser. The
-UI is productized from `ltv.zip` and keeps the mockup's full virtual remote,
-while remote actions are stubbed until the custom IR bridge is ready.
+UI is productized from `ltv.zip` and includes a compact virtual remote backed by
+a Raspberry Pi Pico USB serial IR bridge.
 
 ## What Runs
 
@@ -10,6 +10,8 @@ while remote actions are stubbed until the custom IR bridge is ready.
 - MediaMTX receives the capture stream and exposes WebRTC/WHEP.
 - FFmpeg capture publisher reads V4L2 video plus ALSA audio and publishes to
   MediaMTX over RTSP.
+- Raspberry Pi Pico receives serial commands from the backend and sends NEC or
+  Samsung IR through the transmitter.
 
 ## Quick Start
 
@@ -24,7 +26,8 @@ Open:
 http://localhost:8080
 ```
 
-For real hardware setup, see [docs/hardware-setup.md](docs/hardware-setup.md).
+For real hardware setup, see [docs/hardware-setup.md](docs/hardware-setup.md)
+and [docs/ir-bridge.md](docs/ir-bridge.md).
 
 ## API
 
@@ -32,4 +35,5 @@ For real hardware setup, see [docs/hardware-setup.md](docs/hardware-setup.md).
 - `POST /api/remote/command`
 - `GET /api/remote/log`
 
-Remote commands return `{ accepted: true, stub: true }` in v1.
+Remote commands resolve dashboard keys to the recorded IR codes and send them to
+the Pico over the configured serial device.

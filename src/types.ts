@@ -6,7 +6,21 @@ export type RemoteLogEntry = {
   label: string;
   value: string | number | boolean | null;
   receivedAt: string;
-  stub: true;
+  stub: boolean;
+  sent: boolean;
+  sequence?: Array<{
+    key: string;
+    label: string;
+    protocol: string;
+    address: string;
+    command: string;
+    bits: number;
+  }>;
+  bridgeResponses?: Array<{
+    request: string;
+    response: string;
+  }>;
+  error?: string | null;
 };
 
 export type StatusResponse = {
@@ -25,8 +39,14 @@ export type StatusResponse = {
     viewers: number;
   };
   remote: {
-    stub: true;
+    stub: boolean;
+    enabled: boolean;
+    available: boolean;
+    device: string;
+    baudRate: number;
     recent: number;
+    lastError: string | null;
+    lastCommandAt: string | null;
   };
 };
 

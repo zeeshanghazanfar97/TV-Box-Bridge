@@ -1386,3 +1386,410 @@ button {
     max-width: 58vw;
   }
 }
+
+/* Compact IR remote, overrides the legacy remote rules above. */
+.remote {
+  right: 16px;
+  bottom: 16px;
+  width: 238px;
+  max-height: calc(100% - 32px);
+  background: linear-gradient(180deg, oklch(0.225 0.018 255 / 0.97), oklch(0.145 0.014 255 / 0.98));
+  border: 1px solid oklch(0.82 0.018 255 / 0.16);
+  border-radius: 28px;
+  box-shadow: 0 28px 76px oklch(0.08 0.012 255 / 0.72), inset 0 1px 0 oklch(0.92 0.014 255 / 0.06);
+  --key-bg: linear-gradient(180deg, oklch(0.315 0.024 255), oklch(0.235 0.02 255));
+  --key-bd: oklch(0.78 0.016 255 / 0.13);
+  --key-sh: inset 0 1px 0 oklch(0.94 0.01 255 / 0.07), 0 2px 7px oklch(0.08 0.01 255 / 0.46);
+}
+
+.remote.is-full {
+  width: 292px;
+}
+
+.remote-bar {
+  min-height: 44px;
+  padding: 9px 10px 8px 15px;
+  border-bottom: 1px solid oklch(0.82 0.018 255 / 0.09);
+  background: linear-gradient(180deg, oklch(0.95 0.01 255 / 0.035), transparent);
+}
+
+.remote-bar-title {
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.remote-grip {
+  width: 16px;
+  height: 8px;
+  background: repeating-linear-gradient(90deg, oklch(0.86 0.012 255 / 0.34) 0 2px, transparent 2px 5px);
+}
+
+.remote-mode {
+  margin-left: auto;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--accent) 42%, var(--key-bd));
+  background: color-mix(in oklab, var(--accent) 16%, oklch(0.2 0.018 255));
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.remote-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.remote-body {
+  padding: 12px;
+  gap: 10px;
+  scrollbar-color: oklch(0.42 0.025 255) transparent;
+}
+
+.remote-quick,
+.remote-face {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quick-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.quick-power,
+.quick-mute {
+  height: 38px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--dim);
+  background: var(--key-bg);
+  border: 1px solid var(--key-bd);
+  box-shadow: var(--key-sh);
+  cursor: pointer;
+}
+
+.quick-power {
+  color: oklch(0.72 0.16 25);
+}
+
+.quick-power.is-on {
+  background: linear-gradient(180deg, oklch(0.55 0.16 25), oklch(0.34 0.1 25));
+  color: oklch(0.98 0.01 25);
+}
+
+.quick-mute.is-on {
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 54%, var(--key-bd));
+}
+
+.dpad {
+  width: 166px;
+  height: 166px;
+  gap: 7px;
+  margin: 0 auto;
+}
+
+.remote.is-full .dpad {
+  width: 136px;
+  height: 136px;
+  gap: 6px;
+}
+
+.dpad-btn {
+  border-radius: 16px;
+  background: var(--key-bg);
+}
+
+.dpad-ok {
+  font-size: 14px;
+  border-color: color-mix(in oklab, var(--accent) 48%, var(--key-bd));
+  background: radial-gradient(circle at 50% 32%, color-mix(in oklab, var(--accent) 34%, oklch(0.31 0.024 255)), oklch(0.22 0.022 255));
+}
+
+.quick-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.remote-key {
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 6px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: var(--dim);
+  background: var(--key-bg);
+  border: 1px solid var(--key-bd);
+  box-shadow: var(--key-sh);
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.12s ease-out, border-color 0.12s ease-out, color 0.12s ease-out;
+}
+
+.remote-key:hover,
+.quick-power:hover,
+.quick-mute:hover,
+.mini-rocker-btn:hover,
+.numkey:hover,
+.typed-key:hover {
+  color: var(--text);
+  border-color: color-mix(in oklab, var(--accent) 44%, var(--key-bd));
+}
+
+.remote-key > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.remote-key-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.remote-key-grid-top .remote-key {
+  min-height: 34px;
+}
+
+.key-danger {
+  color: oklch(0.76 0.16 25);
+}
+
+.key-red {
+  color: oklch(0.72 0.16 25);
+}
+
+.key-yellow {
+  color: oklch(0.82 0.13 94);
+}
+
+.key-green {
+  color: oklch(0.78 0.12 154);
+}
+
+.key-blue {
+  color: oklch(0.74 0.13 255);
+}
+
+.remote-tv-strip,
+.remote-center {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mini-rocker {
+  min-height: 102px;
+  display: grid;
+  grid-template-rows: 1fr 22px 1fr;
+  overflow: hidden;
+  border: 1px solid var(--key-bd);
+  border-radius: 18px;
+  background: oklch(0.125 0.012 255 / 0.48);
+}
+
+.remote-center {
+  grid-template-columns: 50px 1fr 50px;
+  align-items: center;
+}
+
+.remote-center .mini-rocker {
+  min-height: 142px;
+}
+
+.mini-rocker-btn {
+  border: 0;
+  color: var(--dim);
+  background: var(--key-bg);
+  box-shadow: var(--key-sh);
+  cursor: pointer;
+}
+
+.mini-rocker-label {
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  background: oklch(0.12 0.012 255 / 0.64);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.mini-rocker-accent .mini-rocker-label {
+  color: var(--accent);
+}
+
+.remote-playback {
+  display: grid;
+  grid-template-columns: 1.12fr repeat(4, 1fr);
+  gap: 7px;
+}
+
+.remote-playback .remote-key {
+  min-height: 34px;
+}
+
+.remote-number-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.numkey {
+  height: 38px;
+  border-radius: 999px;
+  background: var(--key-bg);
+  border: 1px solid var(--key-bd);
+  box-shadow: var(--key-sh);
+  color: var(--text);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.numkey-util,
+.numkey-go {
+  font-family: "Hanken Grotesk", system-ui, sans-serif;
+  font-size: 10px;
+}
+
+.numkey-go {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+.channel-entry {
+  height: 36px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 7px;
+  padding: 0 7px 0 10px;
+  border-radius: 999px;
+  background: oklch(0.12 0.012 255 / 0.56);
+  border: 1px solid var(--key-bd);
+}
+
+.channel-entry > span {
+  color: var(--faint);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.channel-entry input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.channel-entry-toggle {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--key-bd);
+  border-radius: 50%;
+  background: var(--key-bg);
+  color: var(--dim);
+  cursor: pointer;
+}
+
+.typed-keypad {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.typed-key {
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--key-bd);
+  background: var(--key-bg);
+  color: var(--dim);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.remote-service-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.remote button:focus-visible,
+.remote input:focus-visible,
+.remote-launcher:focus-visible,
+.iconbtn:focus-visible,
+.sc-btn:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--accent) 72%, transparent);
+  outline-offset: 2px;
+}
+
+.rocker-btn.pressed,
+.dpad-btn.pressed,
+.dpad-ok.pressed,
+.btn-ghost.pressed,
+.numkey.pressed,
+.advkey.pressed,
+.tpkey.pressed,
+.btn-mute.pressed,
+.head-toggle.pressed,
+.goto-btn.pressed,
+.remote-key.pressed,
+.quick-power.pressed,
+.quick-mute.pressed,
+.mini-rocker-btn.pressed,
+.typed-key.pressed,
+.channel-entry-toggle.pressed {
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 62%, transparent),
+    0 0 18px color-mix(in oklab, var(--accent) 34%, transparent);
+  border-color: var(--accent);
+}
+
+@media (max-width: 1040px) {
+  .remote,
+  .remote.is-full {
+    left: auto;
+    right: 14px;
+    width: min(292px, calc(100vw - 28px));
+    max-height: min(82vh, calc(100% - 28px));
+  }
+}
+
+@media (max-width: 700px) {
+  .remote,
+  .remote.is-full {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: auto;
+    max-height: 74vh;
+  }
+
+  .remote:not(.is-full) {
+    left: auto;
+    width: min(238px, calc(100vw - 20px));
+  }
+}
