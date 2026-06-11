@@ -15,6 +15,14 @@ const CHANNELS: Channel[] = [
   { num: "077", name: "RETRO TOONS", genre: "KIDS", program: "Cosmic Cadets", next: "Robo Rangers · 21:45", progress: 88 }
 ];
 
+function defaultWhepUrl() {
+  if (typeof window === "undefined") return "http://localhost:8889/tvbox/whep";
+
+  const protocol = window.location.protocol === "https:" ? "https:" : "http:";
+  const hostname = window.location.hostname || "localhost";
+  return `${protocol}//${hostname}:8889/tvbox/whep`;
+}
+
 const DEFAULT_STATUS: StatusResponse = {
   serverTime: new Date().toISOString(),
   capture: {
@@ -26,7 +34,7 @@ const DEFAULT_STATUS: StatusResponse = {
   },
   stream: {
     path: "tvbox",
-    whepUrl: import.meta.env.VITE_STREAM_WHEP_URL || "http://localhost:8889/tvbox/whep",
+    whepUrl: import.meta.env.VITE_STREAM_WHEP_URL || defaultWhepUrl(),
     ready: false,
     viewers: 0
   },
