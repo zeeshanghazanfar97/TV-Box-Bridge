@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "./icons";
 import { connectWHEP, type PlayerState, type WHEPConnection } from "./webrtc";
-import type { CaptureHealth, Channel } from "./types";
+import type { CaptureHealth } from "./types";
 
 type LiveScreenProps = {
-  channel: Channel;
+  screenRef: { current: HTMLDivElement | null };
   on: boolean;
   muted: boolean;
+  volume: number;
   capture: CaptureHealth;
   whepUrl: string;
   refreshToken: number;
+  onMutedChange: (muted: boolean) => void;
+  onVolumeChange: (volume: number) => void;
   onRefresh: () => void;
-  onMuteStream: () => void;
   onFullscreen: () => void;
 };
 
@@ -54,21 +56,43 @@ function useClock() {
 }
 
 export function LiveScreen({
-  channel,
+  screenRef,
   on,
   muted,
+  volume,
   capture,
   whepUrl,
   refreshToken,
+  onMutedChange,
+  onVolumeChange,
   onRefresh,
-  onMuteStream,
   onFullscreen
 }: LiveScreenProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const connectionRef = useRef<WHEPConnection | null>(null);
+  const hudTimer = useRef<number | null>(null);
   const [playerState, setPlayerState] = useState<PlayerState>("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const [showVolumeHud, setShowVolumeHud] = useState(false);
   const { hh, mm, ss } = useClock();
+
+  function flashVolumeHud() {
+    setShowVolumeHud(true);
+    if (hudTimer.current) window.clearTimeout(hudTimer.current);
+    hudTimer.current = window.setTimeout(() => setShowVolumeHud(false), 900);
+  }
+
+  function setLocalVolume(next: number) {
+    const clamped = Math.max(0, Math.min(1, next));
+    onVolumeChange(clamped);
+    if (clamped > 0 && muted) onMutedChange(false);
+    flashVolumeHud();
+  }
+
+  function toggleLocalMute() {
+    onMutedChange(!muted);
+    flashVolumeHud();
+  }
 
   useEffect(() => {
     connectionRef.current?.close();
@@ -124,11 +148,50 @@ export function LiveScreen({
     };
   }, [on, whepUrl, refreshToken]);
 
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.volume = Math.max(0, Math.min(1, volume));
+  }, [volume]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, button, [contenteditable='true']")) return;
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setLocalVolume(volume + 0.05);
+      } else if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setLocalVolume(volume - 0.05);
+      } else if (event.key.toLowerCase() === "m") {
+        event.preventDefault();
+        toggleLocalMute();
+      } else if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        onFullscreen();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [muted, onFullscreen, onMutedChange, onVolumeChange, volume]);
+
   const live = on && playerState === "playing";
   const offline = capture === "offline" || capture === "error";
+  const volumePercent = Math.round((muted ? 0 : volume) * 100);
 
   return (
-    <div className="screen">
+    <div
+      ref={(node) => {
+        screenRef.current = node;
+      }}
+      className="screen"
+      onDoubleClick={(event) => {
+        const target = event.target as HTMLElement | null;
+        if (target?.closest("button, input")) return;
+        onFullscreen();
+      }}
+    >
       <BroadcastFallback />
       <video
         ref={videoRef}
@@ -152,11 +215,6 @@ export function LiveScreen({
       {live && (
         <div className="screen-overlays">
           <div className="ov-top">
-            <div className="bug">
-              <span className="bug-num">{channel.num}</span>
-              <span className="bug-name">{channel.name}</span>
-              <span className="bug-hd">HD</span>
-            </div>
             <div className="ov-top-right">
               <div className="live-badge">
                 <span className="live-dot" />
@@ -168,20 +226,6 @@ export function LiveScreen({
               </div>
             </div>
           </div>
-
-          <div className="ov-bottom">
-            <div className="lowerthird">
-              <div className="lt-bar" />
-              <div className="lt-body">
-                <div className="lt-kicker">{channel.genre} · NOW</div>
-                <div className="lt-title">{channel.program}</div>
-                <div className="lt-next">Next: {channel.next}</div>
-              </div>
-              <div className="lt-prog">
-                <div className="lt-prog-fill" style={{ width: `${channel.progress}%` }} />
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
@@ -189,17 +233,28 @@ export function LiveScreen({
         <button className="sc-btn" onClick={onRefresh} title="Refresh stream">
           <Icon name="refresh" size={18} />
         </button>
-        <button className={`sc-btn${muted ? " is-on" : ""}`} onClick={onMuteStream} title="Mute stream">
+        <button className={`sc-btn${muted ? " is-on" : ""}`} onClick={toggleLocalMute} title="Mute stream">
           <Icon name={muted ? "mute" : "volume"} size={18} />
         </button>
+        <input
+          className="volume-slider"
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value={muted ? 0 : volume}
+          onChange={(event) => setLocalVolume(Number(event.target.value))}
+          title="Volume"
+        />
         <button className="sc-btn" onClick={onFullscreen} title="Fullscreen">
           <Icon name="fullscreen" size={18} />
         </button>
       </div>
 
-      {live && muted && (
-        <div className="screen-mute-flag">
-          <Icon name="mute" size={16} /> MUTED
+      {live && (muted || showVolumeHud) && (
+        <div className={`screen-volume-flag${muted ? " is-muted" : ""}`}>
+          <Icon name={muted ? "mute" : "volume"} size={16} />
+          <span>{muted ? "MUTED" : `${volumePercent}%`}</span>
         </div>
       )}
     </div>

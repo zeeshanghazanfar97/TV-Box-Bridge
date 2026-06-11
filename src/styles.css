@@ -208,6 +208,12 @@ button {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
+.screen:fullscreen {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .video-el {
   position: absolute;
   inset: 0;
@@ -332,7 +338,7 @@ button {
 
 .ov-top {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: flex-start;
   gap: 16px;
 }
@@ -529,7 +535,13 @@ button {
   border-color: color-mix(in oklab, var(--accent) 50%, transparent);
 }
 
-.screen-mute-flag {
+.volume-slider {
+  width: 96px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.screen-volume-flag {
   position: absolute;
   bottom: 16px;
   right: 16px;
@@ -539,12 +551,25 @@ button {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #fda4af;
+  color: #dce3f2;
   background: rgba(7, 10, 16, 0.6);
   padding: 6px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(251, 113, 133, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   z-index: 12;
+}
+
+.screen-volume-flag > svg {
+  color: var(--accent);
+}
+
+.screen-volume-flag.is-muted {
+  color: #fda4af;
+  border-color: rgba(251, 113, 133, 0.3);
+}
+
+.screen-volume-flag.is-muted > svg {
+  color: #fda4af;
 }
 
 .toast {

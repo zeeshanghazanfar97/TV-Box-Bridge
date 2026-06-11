@@ -1,14 +1,5 @@
 export type CaptureHealth = "online" | "offline" | "connecting" | "error" | "unknown";
 
-export type Channel = {
-  num: string;
-  name: string;
-  genre: string;
-  program: string;
-  next: string;
-  progress: number;
-};
-
 export type RemoteLogEntry = {
   id: number;
   command: string;

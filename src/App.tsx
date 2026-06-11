@@ -3,17 +3,8 @@ import { fetchStatus, sendRemoteCommand } from "./api";
 import { Icon } from "./icons";
 import type { IconName } from "./icons";
 import { Remote, type RemoteHandlers, type RemoteState } from "./remote";
-import type { CaptureHealth, Channel, RemoteLogEntry, StatusResponse } from "./types";
+import type { CaptureHealth, RemoteLogEntry, StatusResponse } from "./types";
 import { LiveScreen } from "./video";
-
-const CHANNELS: Channel[] = [
-  { num: "204", name: "CINEMAX HD", genre: "MOVIES", program: "The Long Afternoon", next: "Night Shift · 22:00", progress: 62 },
-  { num: "101", name: "NEWS NOW", genre: "NEWS", program: "World at Ten", next: "Market Watch · 22:30", progress: 38 },
-  { num: "312", name: "SPORTS 1 HD", genre: "SPORTS", program: "Premier Live: Derby", next: "Post-Match · 22:15", progress: 74 },
-  { num: "508", name: "NAT GEO WILD", genre: "NATURE", program: "Coasts of Patagonia", next: "Deep Blue · 22:05", progress: 24 },
-  { num: "622", name: "FOOD NETWORK", genre: "LIFESTYLE", program: "Fire & Smoke", next: "Bakeoff · 22:00", progress: 50 },
-  { num: "077", name: "RETRO TOONS", genre: "KIDS", program: "Cosmic Cadets", next: "Robo Rangers · 21:45", progress: 88 }
-];
 
 function defaultWhepUrl() {
   if (typeof window === "undefined") return "http://localhost:8889/tvbox/whep";
@@ -145,11 +136,11 @@ function useStatus() {
 
 export function App() {
   const status = useStatus();
+  const videoSurfaceRef = useRef<HTMLDivElement | null>(null);
   const [on, setOn] = useState(true);
-  const [muted, setMuted] = useState(false);
-  const [volume, setVolume] = useState(24);
-  const [channelIndex, setChannelIndex] = useState(0);
-  const [customChannel, setCustomChannel] = useState<Channel | null>(null);
+  const [remoteMuted, setRemoteMuted] = useState(false);
+  const [streamMuted, setStreamMuted] = useState(false);
+  const [streamVolume, setStreamVolume] = useState(0.8);
   const [channelInput, setChannelInput] = useState("");
   const [keypadOpen, setKeypadOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -157,10 +148,6 @@ export function App() {
   const [toast, setToast] = useState<RemoteLogEntry | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
   const toastTimer = useRef<number | null>(null);
-
-  const channel = useMemo(() => {
-    return channelIndex >= 0 ? CHANNELS[channelIndex] : customChannel ?? CHANNELS[0];
-  }, [channelIndex, customChannel]);
 
   const pushToast = useCallback((entry: RemoteLogEntry) => {
     setToast(entry);
@@ -187,6 +174,23 @@ export function App() {
     [pushToast]
   );
 
+  const toggleVideoFullscreen = useCallback(() => {
+    const screen = videoSurfaceRef.current;
+    if (!screen) return;
+
+    if (document.fullscreenElement === screen) {
+      void document.exitFullscreen?.();
+      return;
+    }
+
+    if (document.fullscreenElement) {
+      void document.exitFullscreen?.().then(() => screen.requestFullscreen?.()).catch(() => undefined);
+      return;
+    }
+
+    void screen.requestFullscreen?.();
+  }, []);
+
   const handlers: RemoteHandlers = useMemo(
     () => ({
       power: () => {
@@ -198,35 +202,22 @@ export function App() {
       },
       mute: () => {
         if (!on) return;
-        setMuted((current) => {
+        setRemoteMuted((current) => {
           const next = !current;
           void send(next ? "mute" : "unmute", next ? "Mute" : "Unmute", next);
           return next;
         });
       },
       volUp: () => {
-        setMuted(false);
-        setVolume((current) => Math.min(100, current + 2));
-        void send("volume_up", "Volume Up", volume + 2);
+        void send("volume_up", "Volume Up");
       },
       volDown: () => {
-        setVolume((current) => Math.max(0, current - 2));
-        void send("volume_down", "Volume Down", volume - 2);
+        void send("volume_down", "Volume Down");
       },
       chUp: () => {
-        setChannelIndex((current) => {
-          const base = current < 0 ? 0 : current;
-          return (base + 1) % CHANNELS.length;
-        });
-        setCustomChannel(null);
         void send("channel_up", "Channel Up");
       },
       chDown: () => {
-        setChannelIndex((current) => {
-          const base = current < 0 ? 0 : current;
-          return (base - 1 + CHANNELS.length) % CHANNELS.length;
-        });
-        setCustomChannel(null);
         void send("channel_down", "Channel Down");
       },
       nav: (direction) => void send(`navigate_${direction.toLowerCase()}`, `Navigate ${direction}`),
@@ -242,34 +233,18 @@ export function App() {
       go: () => {
         const raw = channelInput.trim();
         if (!raw) return;
-        const padded = raw.padStart(3, "0");
-        const index = CHANNELS.findIndex((item) => item.num === raw || item.num === padded);
-        if (index >= 0) {
-          setChannelIndex(index);
-          setCustomChannel(null);
-        } else {
-          setChannelIndex(-1);
-          setCustomChannel({
-            num: padded,
-            name: "DIRECT TUNE",
-            genre: "LIVE",
-            program: "Tuning channel...",
-            next: "-",
-            progress: 8
-          });
-        }
         void send("go_to_channel", `Going to channel ${raw}`, raw);
         setChannelInput("");
         setKeypadOpen(false);
       },
       adv: (command, label) => void send(command.toLowerCase().replace(/[^a-z0-9]+/g, "_"), label ?? command)
     }),
-    [channelInput, on, send, volume]
+    [channelInput, on, send]
   );
 
   const remoteState: RemoteState = {
     on,
-    muted,
+    muted: remoteMuted,
     chInput: channelInput,
     keypadOpen,
     drawerOpen
@@ -297,7 +272,7 @@ export function App() {
             <StatusChip icon="bolt" label="IR Bridge" value="Stub" ok />
           </div>
           <div className="top-actions">
-            <button className="iconbtn" title="Fullscreen" onClick={() => document.documentElement.requestFullscreen?.()}>
+            <button className="iconbtn" title="Fullscreen" onClick={toggleVideoFullscreen}>
               <Icon name="fullscreen" size={18} />
             </button>
             <button className="iconbtn" title="Settings" onClick={() => void send("settings", "Open Settings")}>
@@ -309,18 +284,20 @@ export function App() {
         <main className="main">
           <section className="stage-screen">
             <LiveScreen
-              channel={channel}
+              screenRef={videoSurfaceRef}
               on={on}
-              muted={muted}
+              muted={streamMuted}
+              volume={streamVolume}
               capture={status.capture.state}
               whepUrl={whepUrl}
               refreshToken={refreshToken}
+              onMutedChange={setStreamMuted}
+              onVolumeChange={setStreamVolume}
               onRefresh={() => {
                 setRefreshToken((current) => current + 1);
                 void send("refresh_stream", "Refresh stream");
               }}
-              onMuteStream={handlers.mute}
-              onFullscreen={() => document.documentElement.requestFullscreen?.()}
+              onFullscreen={toggleVideoFullscreen}
             />
             {toast && (
               <div className="toast" key={toast.id}>
