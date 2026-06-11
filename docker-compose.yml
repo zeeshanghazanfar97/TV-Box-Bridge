@@ -1,0 +1,51 @@
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:1.19.1
+    restart: unless-stopped
+    environment:
+      MTX_WEBRTCADDITIONALHOSTS: "${WEBRTC_ADDITIONAL_HOSTS:-}"
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+    ports:
+      - "8554:8554"
+      - "8889:8889"
+      - "8189:8189/udp"
+      - "127.0.0.1:9997:9997"
+
+  dashboard:
+    build:
+      context: .
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      STREAM_PATH: "${STREAM_PATH:-tvbox}"
+      STREAM_WHEP_URL: "${STREAM_WHEP_URL:-}"
+      MEDIAMTX_API_URL: "http://mediamtx:9997"
+      TVBOX_VIDEO_DEVICE: "${TVBOX_VIDEO_DEVICE:-/dev/tvbox-video}"
+      TVBOX_AUDIO_DEVICE: "${TVBOX_AUDIO_DEVICE:-plughw:CARD=<capture-card-id>,DEV=0}"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mediamtx
+
+  capture-publisher:
+    build:
+      context: ./docker/capture-publisher
+    restart: unless-stopped
+    environment:
+      TVBOX_VIDEO_DEVICE: "${TVBOX_VIDEO_DEVICE:-/dev/tvbox-video}"
+      TVBOX_AUDIO_DEVICE: "${TVBOX_AUDIO_DEVICE:-plughw:CARD=<capture-card-id>,DEV=0}"
+      TVBOX_VIDEO_SIZE: "${TVBOX_VIDEO_SIZE:-1920x1080}"
+      TVBOX_FRAMERATE: "${TVBOX_FRAMERATE:-30}"
+      TVBOX_INPUT_FORMAT: "${TVBOX_INPUT_FORMAT:-mjpeg}"
+      TVBOX_VIDEO_BITRATE: "${TVBOX_VIDEO_BITRATE:-4500k}"
+      TVBOX_AUDIO_ENABLED: "${TVBOX_AUDIO_ENABLED:-true}"
+      MEDIAMTX_RTSP_URL: "rtsp://mediamtx:8554/${STREAM_PATH:-tvbox}"
+    devices:
+      - "${TVBOX_VIDEO_DEVICE:-/dev/tvbox-video}:${TVBOX_VIDEO_DEVICE:-/dev/tvbox-video}"
+      - "/dev/snd:/dev/snd"
+    group_add:
+      - "${VIDEO_GID:-44}"
+      - "${AUDIO_GID:-29}"
+    depends_on:
+      - mediamtx

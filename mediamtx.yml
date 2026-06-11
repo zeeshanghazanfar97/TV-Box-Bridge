@@ -1,0 +1,40 @@
+logLevel: info
+logDestinations: [stdout]
+
+authInternalUsers:
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: publish
+        path:
+      - action: read
+        path:
+      - action: api
+
+api: true
+apiAddress: :9997
+apiAllowOrigins: ["*"]
+
+rtsp: true
+rtspTransports: [tcp]
+rtspAddress: :8554
+
+rtmp: false
+hls: false
+srt: false
+moq: false
+
+webrtc: true
+webrtcAddress: :8889
+webrtcAllowOrigins: ["*"]
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: ""
+webrtcIPsFromInterfaces: true
+webrtcAdditionalHosts: []
+webrtcICEServers2: []
+
+paths:
+  tvbox:
+    source: publisher
+    overridePublisher: true
