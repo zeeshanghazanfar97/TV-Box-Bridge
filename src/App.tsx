@@ -182,6 +182,40 @@ export function App() {
     [pushToast]
   );
 
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, button, [contenteditable='true']")) return;
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+
+      if (/^[0-9]$/.test(event.key)) {
+        event.preventDefault();
+        void send(`number_${event.key}`, event.key);
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        void send("ok", "OK / Select");
+        return;
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        void send("navigate_up", "Navigate Up");
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        void send("navigate_down", "Navigate Down");
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [send]);
+
   const toggleVideoFullscreen = useCallback(() => {
     const screen = videoSurfaceRef.current;
     if (!screen) return;
