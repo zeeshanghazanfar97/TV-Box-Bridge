@@ -26,6 +26,7 @@ const DEFAULT_STATUS: StatusResponse = {
   stream: {
     path: "tvbox",
     whepUrl: import.meta.env.VITE_STREAM_WHEP_URL || defaultWhepUrl(),
+    hlsUrl: "",
     ready: false,
     viewers: 0
   },

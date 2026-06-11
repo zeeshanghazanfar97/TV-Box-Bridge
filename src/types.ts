@@ -36,6 +36,7 @@ export type StatusResponse = {
   stream: {
     path: string;
     whepUrl: string;
+    hlsUrl: string;
     ready: boolean;
     viewers: number;
   };

@@ -14,6 +14,10 @@ let nextRemoteId = 1;
 const config = {
   streamPath: process.env.STREAM_PATH || "tvbox",
   whepUrl: process.env.STREAM_WHEP_URL || process.env.VITE_STREAM_WHEP_URL || "",
+  hlsUrl: process.env.STREAM_HLS_URL || "",
+  liveTvChannelName: process.env.LIVE_TV_CHANNEL_NAME || "TV Box Live",
+  liveTvChannelNumber: process.env.LIVE_TV_CHANNEL_NUMBER || "1",
+  liveTvGroupTitle: process.env.LIVE_TV_GROUP_TITLE || "Live TV",
   mediamtxApiUrl: process.env.MEDIAMTX_API_URL || "http://localhost:9997",
   videoDevice: process.env.TVBOX_VIDEO_DEVICE || "/dev/tvbox-video",
   audioDevice: process.env.TVBOX_AUDIO_DEVICE || "plughw:CARD=<capture-card-id>,DEV=0",
@@ -129,6 +133,42 @@ function getWhepUrl(request) {
   return `http://${hostname}:8889/${config.streamPath}/whep`;
 }
 
+function getHlsUrl(request) {
+  if (config.hlsUrl) return config.hlsUrl;
+
+  const host = request.headers.host || "localhost:8080";
+  const hostname = host.includes(":") ? host.split(":")[0] : host;
+  return `http://${hostname}:8888/${config.streamPath}/index.m3u8`;
+}
+
+function sendText(response, status, body, contentType = "text/plain; charset=utf-8") {
+  response.writeHead(status, {
+    "Content-Type": contentType,
+    "Content-Length": Buffer.byteLength(body),
+    "Cache-Control": "no-store"
+  });
+  response.end(body);
+}
+
+function escapeM3uAttribute(value) {
+  return String(value).replace(/"/g, "'");
+}
+
+function handleLiveTvPlaylist(request, response) {
+  const name = config.liveTvChannelName;
+  const channelNumber = config.liveTvChannelNumber;
+  const groupTitle = config.liveTvGroupTitle;
+  const hlsUrl = getHlsUrl(request);
+  const body = [
+    "#EXTM3U",
+    `#EXTINF:-1 tvg-id="${escapeM3uAttribute(config.streamPath)}" tvg-name="${escapeM3uAttribute(name)}" tvg-chno="${escapeM3uAttribute(channelNumber)}" group-title="${escapeM3uAttribute(groupTitle)}",${name}`,
+    hlsUrl,
+    ""
+  ].join("\n");
+
+  sendText(response, 200, body, "application/x-mpegURL; charset=utf-8");
+}
+
 async function handleStatus(request, response) {
   let media = {
     ready: false,
@@ -157,6 +197,7 @@ async function handleStatus(request, response) {
     stream: {
       path: config.streamPath,
       whepUrl: getWhepUrl(request),
+      hlsUrl: getHlsUrl(request),
       ready: media.ready,
       viewers: media.viewers
     },
@@ -270,6 +311,11 @@ const server = createServer(async (request, response) => {
 
   if (method === "GET" && pathname === "/api/remote/log") {
     sendJson(response, 200, { entries: remoteLog });
+    return;
+  }
+
+  if (method === "GET" && (pathname === "/live-tv/tvbox.m3u" || pathname === "/api/live-tv/playlist.m3u")) {
+    handleLiveTvPlaylist(request, response);
     return;
   }
 

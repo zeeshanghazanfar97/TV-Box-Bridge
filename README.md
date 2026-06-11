@@ -26,14 +26,16 @@ Open:
 http://localhost:8080
 ```
 
-For real hardware setup, see [docs/hardware-setup.md](docs/hardware-setup.md)
-and [docs/ir-bridge.md](docs/ir-bridge.md).
+For real hardware setup, see [docs/hardware-setup.md](docs/hardware-setup.md),
+[docs/ir-bridge.md](docs/ir-bridge.md), and
+[docs/jellyfin-live-tv.md](docs/jellyfin-live-tv.md).
 
 ## API
 
 - `GET /api/status`
 - `POST /api/remote/command`
 - `GET /api/remote/log`
+- `GET /live-tv/tvbox.m3u`
 
 Remote commands resolve dashboard keys to the recorded IR codes and send them to
 the Pico over the configured serial device.

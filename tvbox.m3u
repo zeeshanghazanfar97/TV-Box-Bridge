@@ -1,0 +1,3 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="tvbox" tvg-name="TV Box Live" tvg-chno="1" group-title="Live TV",TV Box Live
+http://10.2.1.101:8888/tvbox/index.m3u8

@@ -93,6 +93,7 @@ firewall:
 
 ```bash
 sudo ufw allow 8080/tcp
+sudo ufw allow 8888/tcp
 sudo ufw allow 8889/tcp
 sudo ufw allow 8189/udp
 sudo ufw allow 8189/tcp
