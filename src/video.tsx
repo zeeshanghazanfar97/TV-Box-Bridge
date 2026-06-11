@@ -137,7 +137,9 @@ export function LiveScreen({
         if (!cancelled && videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch(() => {
-            setNeedsPlaybackGesture(true);
+            if (!videoRef.current || videoRef.current.paused) {
+              setNeedsPlaybackGesture(true);
+            }
           });
         }
       }
@@ -195,7 +197,7 @@ export function LiveScreen({
   const live = on && playerState === "playing";
   const offline = capture === "offline" || capture === "error";
   const volumePercent = Math.round((muted ? 0 : volume) * 100);
-  const showStart = on && playerState !== "error" && (!playbackStarted || needsPlaybackGesture);
+  const showStart = on && !live && playerState !== "error" && (!playbackStarted || needsPlaybackGesture);
   const startStatus = offline ? "Capture offline" : "HDMI capture ready";
 
   return (
@@ -217,7 +219,16 @@ export function LiveScreen({
         autoPlay
         playsInline
         muted={muted}
-        onClick={() => videoRef.current?.play().catch(() => undefined)}
+        onClick={() => {
+          videoRef.current
+            ?.play()
+            .then(() => setNeedsPlaybackGesture(false))
+            .catch(() => undefined);
+        }}
+        onPlaying={() => {
+          setPlaybackStarted(true);
+          setNeedsPlaybackGesture(false);
+        }}
       />
 
       {!on && <StandbyScene message="STANDBY" detail="Box is powered off, press Power to wake" />}
