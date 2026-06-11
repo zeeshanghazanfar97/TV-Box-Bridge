@@ -13,8 +13,8 @@ function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
-function hex(value) {
-  return `0x${Number(value).toString(16).toUpperCase()}`;
+function hex(value, width = 0) {
+  return `0x${Number(value).toString(16).toUpperCase().padStart(width, "0")}`;
 }
 
 class SerialIrBridge {
@@ -112,7 +112,7 @@ class SerialIrBridge {
   }
 
   async sendUnlocked(code) {
-    const line = `SEND ${code.protocol} ${hex(code.raw)} 0\n`;
+    const line = `SEND ${code.protocol} ${hex(code.raw, 8)} 0\n`;
 
     try {
       await this.ensureOpen();

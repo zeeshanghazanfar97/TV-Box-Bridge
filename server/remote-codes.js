@@ -167,7 +167,7 @@ function summarizeCode(code) {
     protocol: code.protocol,
     address: `0x${code.address.toString(16).toUpperCase()}`,
     command: `0x${code.command.toString(16).toUpperCase()}`,
-    raw: `0x${code.raw.toString(16).toUpperCase()}`,
+    raw: `0x${code.raw.toString(16).toUpperCase().padStart(8, "0")}`,
     bits: code.bits
   };
 }
