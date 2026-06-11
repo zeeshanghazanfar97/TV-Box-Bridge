@@ -8,7 +8,7 @@
 - `/dev/ir-pico` exists and survives unplug/replug after installing the udev rule.
 - `v4l2-ctl --list-formats-ext -d /dev/tvbox-video` shows `MJPG` at the selected resolution and frame rate.
 - `arecord -L` contains the configured ALSA capture name.
-- Arduino Serial Monitor at `115200` shows `READY TVBOX_IR_BRIDGE v1` after uploading `ir_bridge_serial.ino`.
+- Arduino Serial Monitor at `115200` shows `READY TVBOX_IR_BRIDGE manual-raw v2` after uploading `ir_bridge_serial.ino`.
 
 ## Capture Publisher
 
@@ -40,6 +40,6 @@ Confirm `capture-publisher` logs show FFmpeg publishing to `rtsp://mediamtx:8554
 - The default remote shows compact Power, Mute, D-pad, Back, Menu, and Info controls.
 - `All keys` reveals the compact physical-remote layout with TV controls, playback, side volume/channel rockers, numbers, guide/favorite, and color keys.
 - Every remote button sends `POST /api/remote/command`, creates a toast, and logs an entry in `GET /api/remote/log`.
-- With `IR_BRIDGE_ENABLED=true`, API responses include `sent: true`, an IR code sequence, and Pico `OK ...` responses.
+- With `IR_BRIDGE_ENABLED=true`, API responses include `sent: true`, an IR code sequence with `raw` values, and Pico `OK ...` responses.
 - With the IR LED pointed at the device, `ok`, navigation, volume/channel, digit, and color-key commands affect the TV box or TV.
 - With `IR_BRIDGE_ENABLED=false`, the status chip shows `IR Bridge Stub` and commands are accepted without serial writes.

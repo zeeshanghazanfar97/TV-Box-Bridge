@@ -20,43 +20,47 @@ Dashboard remote key -> Node backend -> USB serial -> Raspberry Pi Pico -> IR LE
 
 ## Pico Wiring
 
-Use the transmitter wiring that worked with `proxy_test.ino`.
+Use the transmitter wiring from the manual raw transmitter sketch.
 
 ```text
-Pico GP16 -> 1k resistor -> transistor base
+Pico GP2  -> 960R or 1k resistor -> transistor base
 Pico GND  -> transistor emitter and transmitter ground
 IR LED anode -> 3V3 or 5V through a current-limiting resistor
 IR LED cathode -> transistor collector
 ```
 
 If you use a ready-made IR transmitter module instead of a bare LED/transistor
-driver, connect its signal pin to Pico `GP16`, plus VCC and GND as required by
-that module.
+driver, connect its signal pin to Pico `GP2`, plus VCC and GND as required by
+that module. If your hardware is still wired to another GPIO, edit
+`IR_SEND_PIN` at the top of `ir_bridge_serial.ino`.
 
 ## Upload The Pico Sketch
 
 1. Open `arduino_sketches/ir_bridge_serial/ir_bridge_serial.ino` in Arduino IDE.
 2. Select the Raspberry Pi Pico / RP2040 board package you used for the working
    recording and proxy sketches.
-3. Install or keep the same `IRremote` library used by `record_codes.ino` and
-   `proxy_test.ino`.
-4. Upload the sketch.
-5. Open Serial Monitor at `115200` baud and confirm it prints:
+3. Upload the sketch. It uses a manual 38kHz transmitter and does not require
+   the `IRremote` library.
+4. Open Serial Monitor at `115200` baud and confirm it prints:
 
 ```text
-READY TVBOX_IR_BRIDGE v1
-FORMAT SEND <NEC|SAMSUNG> <address> <command> [repeats]
+READY TVBOX_IR_BRIDGE manual-raw v2
+FORMAT SEND <NEC|SAMSUNG> <raw32> [repeats]
+EXAMPLE SEND NEC 0x3EC1FD01 0
 ```
 
 Manual serial commands:
 
 ```text
 PING
-SEND NEC 0xFD01 0xCE 0
-SEND SAMSUNG 0x7 0x2 0
+SEND NEC 0x31CEFD01 0
+SEND NEC 0x3EC1FD01 0
+SEND SAMSUNG 0xFD020707 0
 ```
 
-The Pico should reply with `OK ...` for valid commands.
+The Pico should reply with `OK ...` for valid commands. The backend sends the
+recorded `Raw Data` value from `docs/remote_ir_codes.md`, not a generated
+address/command pair.
 
 ## Stable `/dev/ir-pico`
 
@@ -98,6 +102,7 @@ IR_SERIAL_DEVICE=/dev/ir-pico
 IR_SERIAL_PATH=/dev/ir-pico
 IR_SERIAL_BAUD=115200
 IR_SERIAL_TIMEOUT_MS=1400
+IR_SERIAL_OPEN_DELAY_MS=1800
 IR_COMMAND_DELAY_MS=120
 IR_CHANNEL_CONFIRM_COMMAND=
 ```
@@ -181,10 +186,31 @@ docker compose exec dashboard ls -lah /dev/ir-pico
 docker compose logs dashboard
 ```
 
+Test the Pico directly on the host:
+
+```bash
+stty -F /dev/ir-pico 115200 raw -echo -icanon min 0 time 10
+exec 3<>/dev/ir-pico
+sleep 2
+printf 'PING\n' >&3
+timeout 3 cat <&3
+```
+
+You should see `OK PONG` or the sketch's `READY TVBOX_IR_BRIDGE manual-raw v2`
+banner. If direct host testing works but the dashboard times out, test from
+inside the container:
+
+```bash
+docker compose exec dashboard sh -lc "stty -F /dev/ir-pico 115200 raw -echo -icanon min 0 time 10 && exec 3<>/dev/ir-pico && sleep 2 && printf 'PING\n' >&3 && timeout 3 cat <&3"
+```
+
 If the API returns `Timed out waiting for Pico response`, confirm the uploaded
 sketch is `ir_bridge_serial.ino`, the baud rate is `115200`, and no other
-program such as Arduino Serial Monitor is holding the serial port open.
+program such as Arduino Serial Monitor is holding the serial port open. If the
+Pico replies from Serial Monitor but the first dashboard command still times
+out, increase `IR_SERIAL_OPEN_DELAY_MS` to `2500` or `3000`; opening the serial
+port can reset some Pico Arduino builds before the sketch is ready to receive.
 
 If the Pico replies `OK` but the TV does not react, recheck the IR LED polarity,
-transistor wiring, distance/angle, and whether the target device expects the
-Samsung TV-control keys or the NEC set-top-box keys.
+transistor wiring, `IR_SEND_PIN`, distance/angle, and whether the target device
+expects the Samsung TV-control keys or the NEC set-top-box keys.

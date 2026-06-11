@@ -1,9 +1,8 @@
-#define IR_SEND_PIN 16  // Pico GP16 -> resistor -> transistor/base -> IR LED
-
 #include <Arduino.h>
-#include <IRremote.hpp>
 
-const int LED_PIN = LED_BUILTIN;
+#define IR_SEND_PIN 2  // Pico GP2 -> 960R/1k resistor -> BC548 base
+#define LED_PIN LED_BUILTIN
+
 const size_t LINE_LIMIT = 96;
 
 String inputLine;
@@ -17,9 +16,61 @@ void blinkLed(int times = 1) {
   }
 }
 
+void sendCarrier38k(unsigned long durationMicros) {
+  unsigned long start = micros();
+
+  while (micros() - start < durationMicros) {
+    digitalWrite(IR_SEND_PIN, HIGH);
+    delayMicroseconds(13);
+    digitalWrite(IR_SEND_PIN, LOW);
+    delayMicroseconds(13);
+  }
+}
+
+void spaceMicros(unsigned long durationMicros) {
+  digitalWrite(IR_SEND_PIN, LOW);
+  delayMicroseconds(durationMicros);
+}
+
+void sendRawLSB32(
+  uint32_t data,
+  unsigned long headerMark,
+  unsigned long headerSpace,
+  unsigned long bitMark,
+  unsigned long zeroSpace,
+  unsigned long oneSpace
+) {
+  sendCarrier38k(headerMark);
+  spaceMicros(headerSpace);
+
+  for (int i = 0; i < 32; i++) {
+    sendCarrier38k(bitMark);
+
+    if (data & 0x1) {
+      spaceMicros(oneSpace);
+    } else {
+      spaceMicros(zeroSpace);
+    }
+
+    data >>= 1;
+  }
+
+  sendCarrier38k(bitMark);
+  digitalWrite(IR_SEND_PIN, LOW);
+}
+
+void sendNECRawLSB(uint32_t data) {
+  sendRawLSB32(data, 9000, 4500, 560, 560, 1690);
+}
+
+void sendSamsungRawLSB(uint32_t data) {
+  sendRawLSB32(data, 4500, 4500, 560, 560, 1690);
+}
+
 void printReady() {
-  Serial.println("READY TVBOX_IR_BRIDGE v1");
-  Serial.println("FORMAT SEND <NEC|SAMSUNG> <address> <command> [repeats]");
+  Serial.println("READY TVBOX_IR_BRIDGE manual-raw v2");
+  Serial.println("FORMAT SEND <NEC|SAMSUNG> <raw32> [repeats]");
+  Serial.println("EXAMPLE SEND NEC 0x3EC1FD01 0");
 }
 
 void printErr(const char* message) {
@@ -33,8 +84,22 @@ uint32_t parseNumber(const char* token) {
   return strtoul(token, nullptr, 0);
 }
 
-void handleSend(char* protocolToken, char* addressToken, char* commandToken, char* repeatsToken) {
-  if (protocolToken == nullptr || addressToken == nullptr || commandToken == nullptr) {
+void sendProtocolRaw(const String& protocol, uint32_t raw) {
+  if (protocol == "NEC") {
+    sendNECRawLSB(raw);
+    return;
+  }
+
+  if (protocol == "SAMSUNG") {
+    sendSamsungRawLSB(raw);
+    return;
+  }
+
+  printErr("unsupported protocol");
+}
+
+void handleSend(char* protocolToken, char* rawToken, char* repeatsToken) {
+  if (protocolToken == nullptr || rawToken == nullptr) {
     printErr("missing arguments");
     return;
   }
@@ -42,26 +107,29 @@ void handleSend(char* protocolToken, char* addressToken, char* commandToken, cha
   String protocol = String(protocolToken);
   protocol.toUpperCase();
 
-  uint16_t address = static_cast<uint16_t>(parseNumber(addressToken));
-  uint16_t command = static_cast<uint16_t>(parseNumber(commandToken));
-  uint8_t repeats = repeatsToken == nullptr ? 0 : static_cast<uint8_t>(parseNumber(repeatsToken));
-
-  if (protocol == "NEC") {
-    IrSender.sendNEC(address, command, repeats);
-  } else if (protocol == "SAMSUNG") {
-    IrSender.sendSamsung(address, command, repeats);
-  } else {
+  if (protocol != "NEC" && protocol != "SAMSUNG") {
     printErr("unsupported protocol");
     return;
   }
 
-  blinkLed(1);
+  uint32_t raw = parseNumber(rawToken);
+  uint8_t repeats = repeatsToken == nullptr ? 0 : static_cast<uint8_t>(parseNumber(repeatsToken));
+
+  digitalWrite(LED_PIN, HIGH);
+
+  for (uint8_t i = 0; i <= repeats; i++) {
+    sendProtocolRaw(protocol, raw);
+    if (i < repeats) {
+      delay(40);
+    }
+  }
+
+  digitalWrite(LED_PIN, LOW);
+
   Serial.print("OK ");
   Serial.print(protocol);
   Serial.print(" 0x");
-  Serial.print(address, HEX);
-  Serial.print(" 0x");
-  Serial.print(command, HEX);
+  Serial.print(raw, HEX);
   Serial.print(" ");
   Serial.println(repeats);
 }
@@ -95,20 +163,21 @@ void processLine(String line) {
   }
 
   char* protocol = strtok(nullptr, " ,\t");
-  char* address = strtok(nullptr, " ,\t");
-  char* irCommand = strtok(nullptr, " ,\t");
+  char* raw = strtok(nullptr, " ,\t");
   char* repeats = strtok(nullptr, " ,\t");
-  handleSend(protocol, address, irCommand, repeats);
+  handleSend(protocol, raw, repeats);
 }
 
 void setup() {
   Serial.begin(115200);
   delay(350);
 
+  pinMode(IR_SEND_PIN, OUTPUT);
+  digitalWrite(IR_SEND_PIN, LOW);
+
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
-  IrSender.begin(IR_SEND_PIN);
   printReady();
 }
 

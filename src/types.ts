@@ -14,6 +14,7 @@ export type RemoteLogEntry = {
     protocol: string;
     address: string;
     command: string;
+    raw: string;
     bits: number;
   }>;
   bridgeResponses?: Array<{

@@ -22,6 +22,7 @@ const config = {
     serialPath: process.env.IR_SERIAL_PATH || process.env.IR_SERIAL_DEVICE || "/dev/ir-pico",
     serialBaud: Number(process.env.IR_SERIAL_BAUD || 115200),
     serialTimeoutMs: Number(process.env.IR_SERIAL_TIMEOUT_MS || 1400),
+    serialOpenDelayMs: Number(process.env.IR_SERIAL_OPEN_DELAY_MS || 1800),
     commandDelayMs: Number(process.env.IR_COMMAND_DELAY_MS || 120),
     channelConfirmCommand: process.env.IR_CHANNEL_CONFIRM_COMMAND || ""
   }
@@ -32,6 +33,7 @@ const irBridge = new SerialIrBridge({
   path: config.remote.serialPath,
   baudRate: config.remote.serialBaud,
   timeoutMs: config.remote.serialTimeoutMs,
+  openDelayMs: config.remote.serialOpenDelayMs,
   commandDelayMs: config.remote.commandDelayMs
 });
 

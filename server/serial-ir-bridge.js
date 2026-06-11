@@ -23,12 +23,14 @@ class SerialIrBridge {
     path = "/dev/ir-pico",
     baudRate = 115200,
     timeoutMs = 1400,
+    openDelayMs = 1800,
     commandDelayMs = 120
   } = {}) {
     this.enabled = enabled;
     this.path = path;
     this.baudRate = baudRate;
     this.timeoutMs = timeoutMs;
+    this.openDelayMs = openDelayMs;
     this.commandDelayMs = commandDelayMs;
     this.handle = null;
     this.pending = Promise.resolve();
@@ -88,6 +90,10 @@ class SerialIrBridge {
     await this.configurePort();
     this.handle = await open(this.path, "r+");
     this.readBuffer = "";
+
+    if (this.openDelayMs > 0) {
+      await delay(this.openDelayMs);
+    }
   }
 
   async close() {
@@ -112,7 +118,7 @@ class SerialIrBridge {
   }
 
   async sendUnlocked(code) {
-    const line = `SEND ${code.protocol} ${hex(code.address)} ${hex(code.command)} 0\n`;
+    const line = `SEND ${code.protocol} ${hex(code.raw)} 0\n`;
 
     try {
       await this.ensureOpen();
