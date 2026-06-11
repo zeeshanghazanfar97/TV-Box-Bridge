@@ -29,7 +29,7 @@ webrtc: true
 webrtcAddress: :8889
 webrtcAllowOrigins: ["*"]
 webrtcLocalUDPAddress: :8189
-webrtcLocalTCPAddress: ""
+webrtcLocalTCPAddress: :8189
 webrtcIPsFromInterfaces: true
 webrtcAdditionalHosts: []
 webrtcICEServers2: []

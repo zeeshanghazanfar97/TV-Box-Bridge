@@ -81,6 +81,16 @@ STREAM_WHEP_URL=http://<ubuntu-server-ip>:8889/tvbox/whep
 WEBRTC_ADDITIONAL_HOSTS=<ubuntu-server-ip>
 ```
 
+Allow the dashboard, WebRTC HTTP handshake, and ICE transport through the host
+firewall:
+
+```bash
+sudo ufw allow 8080/tcp
+sudo ufw allow 8889/tcp
+sudo ufw allow 8189/udp
+sudo ufw allow 8189/tcp
+```
+
 Open the dashboard on the LAN:
 
 ```text
