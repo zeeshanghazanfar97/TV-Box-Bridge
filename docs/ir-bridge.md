@@ -102,7 +102,6 @@ IR_SERIAL_DEVICE=/dev/ir-pico
 IR_SERIAL_PATH=/dev/ir-pico
 IR_SERIAL_BAUD=115200
 IR_SERIAL_TIMEOUT_MS=1400
-IR_SERIAL_OPEN_DELAY_MS=1800
 IR_COMMAND_DELAY_MS=120
 IR_CHANNEL_CONFIRM_COMMAND=
 ```
@@ -189,27 +188,15 @@ docker compose logs dashboard
 Test the Pico directly on the host:
 
 ```bash
-stty -F /dev/ir-pico 115200 raw -echo -icanon min 0 time 10
-exec 3<>/dev/ir-pico
-sleep 2
-printf 'PING\n' >&3
-timeout 3 cat <&3
+printf 'PING\n' > /dev/ir-pico
 ```
 
 You should see `OK PONG` or the sketch's `READY TVBOX_IR_BRIDGE manual-raw v2`
-banner. If direct host testing works but the dashboard times out, test from
-inside the container:
-
-```bash
-docker compose exec dashboard sh -lc "stty -F /dev/ir-pico 115200 raw -echo -icanon min 0 time 10 && exec 3<>/dev/ir-pico && sleep 2 && printf 'PING\n' >&3 && timeout 3 cat <&3"
-```
+banner in the serial monitor.
 
 If the API returns `Timed out waiting for Pico response`, confirm the uploaded
 sketch is `ir_bridge_serial.ino`, the baud rate is `115200`, and no other
-program such as Arduino Serial Monitor is holding the serial port open. If the
-Pico replies from Serial Monitor but the first dashboard command still times
-out, increase `IR_SERIAL_OPEN_DELAY_MS` to `2500` or `3000`; opening the serial
-port can reset some Pico Arduino builds before the sketch is ready to receive.
+program such as Arduino Serial Monitor is holding the serial port open.
 
 If the Pico replies `OK` but the TV does not react, recheck the IR LED polarity,
 transistor wiring, `IR_SEND_PIN`, distance/angle, and whether the target device
