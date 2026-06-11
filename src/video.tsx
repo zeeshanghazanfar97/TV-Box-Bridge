@@ -71,6 +71,8 @@ export function LiveScreen({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const connectionRef = useRef<WHEPConnection | null>(null);
   const hudTimer = useRef<number | null>(null);
+  const [playbackStarted, setPlaybackStarted] = useState(false);
+  const [needsPlaybackGesture, setNeedsPlaybackGesture] = useState(false);
   const [playerState, setPlayerState] = useState<PlayerState>("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [showVolumeHud, setShowVolumeHud] = useState(false);
@@ -94,6 +96,14 @@ export function LiveScreen({
     flashVolumeHud();
   }
 
+  function startPlayback() {
+    setPlaybackStarted(true);
+    setNeedsPlaybackGesture(false);
+    if (videoRef.current?.srcObject) {
+      videoRef.current.play().catch(() => setNeedsPlaybackGesture(true));
+    }
+  }
+
   useEffect(() => {
     connectionRef.current?.close();
     connectionRef.current = null;
@@ -103,6 +113,12 @@ export function LiveScreen({
     video.srcObject = null;
 
     if (!on) {
+      setPlayerState("idle");
+      setMessage(null);
+      return;
+    }
+
+    if (!playbackStarted) {
       setPlayerState("idle");
       setMessage(null);
       return;
@@ -121,7 +137,7 @@ export function LiveScreen({
         if (!cancelled && videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch(() => {
-            setMessage("Click the screen to start playback");
+            setNeedsPlaybackGesture(true);
           });
         }
       }
@@ -146,7 +162,7 @@ export function LiveScreen({
       connectionRef.current = null;
       if (videoRef.current) videoRef.current.srcObject = null;
     };
-  }, [on, whepUrl, refreshToken]);
+  }, [on, playbackStarted, whepUrl, refreshToken]);
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.volume = Math.max(0, Math.min(1, volume));
@@ -179,6 +195,8 @@ export function LiveScreen({
   const live = on && playerState === "playing";
   const offline = capture === "offline" || capture === "error";
   const volumePercent = Math.round((muted ? 0 : volume) * 100);
+  const showStart = on && playerState !== "error" && (!playbackStarted || needsPlaybackGesture);
+  const startStatus = offline ? "Capture offline" : "HDMI capture ready";
 
   return (
     <div
@@ -203,13 +221,44 @@ export function LiveScreen({
       />
 
       {!on && <StandbyScene message="STANDBY" detail="Box is powered off, press Power to wake" />}
+      {showStart && (
+        <div className="scene scene-start">
+          <div className="start-panel">
+            <button className="start-button" onClick={startPlayback} type="button">
+              <Icon name="play" size={22} />
+              <span>Start Live TV</span>
+            </button>
+            <div className="start-status">
+              <span className="live-dot" />
+              {startStatus}
+            </div>
+          </div>
+        </div>
+      )}
       {on && playerState === "connecting" && (
         <div className="scene scene-striped">
           <span className="ph-label">LIVE CAPTURE · HDMI IN · CONNECTING</span>
         </div>
       )}
       {on && playerState === "error" && (
-        <StandbyScene message={offline ? "CAPTURE OFFLINE" : "STREAM ERROR"} detail={message ?? "Refresh the stream when capture is ready"} />
+        <div className="scene scene-standby">
+          <div className="standby-mark">
+            <Icon name="power" size={40} />
+          </div>
+          <div className="standby-text">{offline ? "CAPTURE OFFLINE" : "STREAM ERROR"}</div>
+          <div className="standby-sub">{message ?? "Refresh the stream when capture is ready"}</div>
+          <button
+            className="retry-button"
+            onClick={() => {
+              setPlaybackStarted(true);
+              onRefresh();
+            }}
+            type="button"
+          >
+            <Icon name="refresh" size={16} />
+            <span>Retry Stream</span>
+          </button>
+        </div>
       )}
 
       {live && (
